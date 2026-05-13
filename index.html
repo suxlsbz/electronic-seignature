@@ -34,55 +34,72 @@
             color: #333;
         }
 
+        .content-wrapper {
+            height: calc(100vh - 340px);
+            overflow-y: auto;
+            margin-bottom: 40px;
+            padding-right: 10px;
+        }
+
         .content {
             font-size: 16px;
             line-height: 1.8;
             color: #333;
-            margin-bottom: 40px;
         }
 
         .signature-section {
-            position: absolute;
-            right: 30px;
-            bottom: 120px;
+            position: relative;
             width: 150px;
             height: 80px;
             border-bottom: 2px solid #333;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .signature-hint {
+            font-size: 12px;
+            color: #999;
+            text-align: center;
         }
 
         .signature-label {
-            position: absolute;
-            right: 30px;
-            bottom: 80px;
             font-size: 14px;
             color: #666;
+            margin-right: 10px;
+            width: 42px;
+            text-align: left;
+        }
+
+        .date-value {
+            font-size: 14px;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        .signature-area-wrapper {
+            position: absolute;
+            right: 30px;
+            bottom: 120px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .signature-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .signature-row:last-child {
+            margin-bottom: 0;
         }
 
         .signature-image {
             width: 100%;
             height: 100%;
             object-fit: contain;
-        }
-
-        .btn-signature {
-            position: absolute;
-            bottom: 30px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 200px;
-            height: 45px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 22px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        .btn-signature:hover {
-            background-color: #45a049;
         }
 
         .modal-overlay {
@@ -193,15 +210,23 @@
 </head>
 <body>
     <div class="container">
-        <h1 class="title">XX告知书</h1>
-        <div class="content">
-            本人已仔细阅读并理解本告知书的全部内容，确认已知悉相关权利和义务。
+        <h1 class="title" id="titleElement"></h1>
+        <div class="content-wrapper">
+            <div class="content" id="contentElement"></div>
         </div>
-        <div class="signature-label">签名：</div>
-        <div class="signature-section" id="signatureArea">
-            <img id="signatureImage" class="signature-image" style="display: none;">
+        <div class="signature-area-wrapper">
+            <div class="signature-row">
+                <div class="signature-label">签名：</div>
+                <div class="signature-section" id="signatureArea" role="button" aria-label="电子签名区域">
+                    <span class="signature-hint" id="signatureHint">点击此处开始签名</span>
+                    <img id="signatureImage" class="signature-image" style="display: none;" alt="电子签名">
+                </div>
+            </div>
+            <div class="signature-row">
+                <div class="signature-label">日期：</div>
+                <div class="date-value" id="dateLabel"></div>
+            </div>
         </div>
-        <button class="btn-signature" id="btnSignature">签名</button>
     </div>
 
     <div class="modal-overlay" id="signatureModal">
@@ -222,16 +247,40 @@
         </div>
     </div>
 
+    <!-- Load content configuration -->
+    <script src="content.js"></script>
+    
     <script>
+        // Initialize content after page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            if (window.noticeTitle) {
+                document.getElementById('titleElement').textContent = window.noticeTitle;
+            }
+            if (window.noticeContent) {
+                document.getElementById('contentElement').innerHTML = window.noticeContent;
+            }
+            
+            // Set current date (Beijing time)
+            const now = new Date();
+            // Calculate Beijing time offset (UTC+8)
+            const beijingOffset = 8 * 60 * 60 * 1000;
+            const utcTime = now.getTime() + now.getTimezoneOffset() * 60 * 1000;
+            const beijingTime = new Date(utcTime + beijingOffset);
+            const year = beijingTime.getUTCFullYear();
+            const month = beijingTime.getUTCMonth() + 1;
+            const day = beijingTime.getUTCDate();
+            document.getElementById('dateLabel').textContent = year + '年' + month + '月' + day + '日';
+        });
+
         const canvas = document.getElementById('signatureCanvas');
         const ctx = canvas.getContext('2d');
         const modal = document.getElementById('signatureModal');
-        const btnSignature = document.getElementById('btnSignature');
         const btnClose = document.getElementById('btnClose');
         const btnClear = document.getElementById('btnClear');
         const btnConfirm = document.getElementById('btnConfirm');
         const signatureArea = document.getElementById('signatureArea');
         const signatureImage = document.getElementById('signatureImage');
+        const signatureHint = document.getElementById('signatureHint');
 
         let isDrawing = false;
         let lastX = 0;
@@ -292,7 +341,7 @@
         canvas.addEventListener('touchmove', draw);
         canvas.addEventListener('touchend', stopDrawing);
 
-        btnSignature.addEventListener('click', () => {
+        signatureArea.addEventListener('click', () => {
             modal.classList.add('show');
         });
 
@@ -308,6 +357,7 @@
             const imageData = canvas.toDataURL('image/png');
             signatureImage.src = imageData;
             signatureImage.style.display = 'block';
+            signatureHint.style.display = 'none';
             modal.classList.remove('show');
         });
 
